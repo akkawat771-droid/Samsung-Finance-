@@ -283,6 +283,39 @@
   }
   .week-tab .wt-tag.has-data { background: color-mix(in srgb, var(--status-good) 16%, transparent); color: var(--status-good); }
   .week-tab .wt-tag.no-data { background: color-mix(in srgb, var(--status-muted) 20%, transparent); color: var(--text-muted); }
+
+  /* main tab navigation */
+  .main-tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .main-tab-btn {
+    font-family: inherit; font-size: 13.5px; font-weight: 600; padding: 10px 16px;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    color: var(--text-secondary); cursor: pointer; margin-bottom: -1px;
+  }
+  .main-tab-btn:hover { color: var(--text-primary); }
+  .main-tab-btn.active { color: var(--series-1); border-bottom-color: var(--series-1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .stat-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 700px) { .stat-grid.cols-4 { grid-template-columns: repeat(2, 1fr); } }
+
+  .info-box {
+    background: var(--surface-1); border: 1px solid var(--border); border-left: 4px solid var(--series-1);
+    border-radius: 8px; padding: 10px 14px; margin: 0 0 16px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.7;
+  }
+  .info-box b { color: var(--text-primary); }
+
+  /* trend status pills */
+  .pill.trend-active { background: color-mix(in srgb, var(--status-good) 16%, transparent); color: var(--status-good); }
+  .pill.trend-cautious { background: color-mix(in srgb, var(--status-warning) 20%, transparent); color: #8a6300; }
+  .pill.trend-severe { background: color-mix(in srgb, var(--status-serious) 18%, transparent); color: #b24a1e; }
+  .pill.trend-dead { background: color-mix(in srgb, var(--status-critical) 14%, transparent); color: var(--status-critical); }
+  :root[data-theme="dark"] .pill.trend-cautious { color: var(--status-warning); }
+  :root[data-theme="dark"] .pill.trend-severe { color: var(--status-serious); }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .pill.trend-cautious { color: var(--status-warning); }
+    :root:where(:not([data-theme="light"])) .pill.trend-severe { color: var(--status-serious); }
+  }
 </style>
 </head>
 <body>
@@ -293,6 +326,13 @@
     <h1>Dashboard Analysis: การเสียบบัตร SF+</h1>
     <p class="sub" id="weekSubtitle">ภาพรวมความสม่ำเสมอในการเสียบบัตร SF+ รายสาขา · True Shop ทั่วประเทศ</p>
   </header>
+
+  <div class="main-tabs" id="mainTabs">
+    <button class="main-tab-btn active" id="mainTabBtnPerf" type="button">Performance by Week</button>
+    <button class="main-tab-btn" id="mainTabBtnTrend" type="button">Trend Performance</button>
+  </div>
+
+  <div class="tab-panel active" id="tabPanelPerf">
 
   <div class="week-tabs" id="weekTabs"></div>
 
@@ -461,6 +501,109 @@
   <footer class="dash-footer" id="dashFooter">
     สร้างจากไฟล์ Format SF.xlsx · จัดทำเพื่อการวิเคราะห์ภายในเท่านั้น
   </footer>
+
+  </div>
+
+  <div class="tab-panel" id="tabPanelTrend">
+
+    <div class="week-tabs" id="trendWeekTabs"></div>
+
+    <div class="banner" id="trendBanner">
+      <div class="banner-dynamic" id="trendBannerDynamic"></div>
+      <div class="banner-static" id="trendBannerStatic"></div>
+    </div>
+
+    <div class="info-box" id="trendInfoBox"></div>
+
+    <div class="filters" id="trendFilters">
+      <div class="filter-field">
+        <label for="tf-region">ภูมิภาค (Region)</label>
+        <div class="ms-dropdown" id="tf-region"></div>
+      </div>
+      <div class="filter-field">
+        <label for="tf-area">พื้นที่ (Area)</label>
+        <div class="ms-dropdown" id="tf-area"></div>
+      </div>
+      <div class="filter-field">
+        <label for="tf-type">ประเภทร้าน (Type Shop)</label>
+        <div class="ms-dropdown" id="tf-type"></div>
+      </div>
+      <div class="filter-field">
+        <label for="tf-size">ขนาดร้าน (Size)</label>
+        <div class="ms-dropdown" id="tf-size"></div>
+      </div>
+      <div class="filter-field">
+        <label for="tf-focus">Focus SF+</label>
+        <div class="ms-dropdown" id="tf-focus"></div>
+      </div>
+      <div class="filter-field">
+        <label for="tf-search">ค้นหาชื่อ/รหัสร้าน</label>
+        <input type="text" id="tf-search" placeholder="พิมพ์ชื่อร้านหรือรหัส...">
+      </div>
+      <button class="reset-btn" id="trendResetFilters">ล้างตัวกรอง</button>
+      <div class="filter-count" id="trendFilterCount"></div>
+    </div>
+
+    <div class="stat-grid cols-4" id="trendStatGrid"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>เลขจำนวนร้าน ในแต่ละ Status</h2>
+            <p class="card-sub">จำแนกตามพฤติกรรมการเสียบบัตรใน 4 สัปดาห์ล่าสุด</p>
+          </div>
+          <button class="table-toggle" data-target="trendStatusChartTable">ดูตาราง</button>
+        </div>
+        <div class="legend" id="trendStatusLegend"></div>
+        <div id="trendStatusChart"></div>
+        <div class="table-wrap" id="trendStatusChartTable" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>%ร้าน ในแต่ละ Status</h2>
+            <p class="card-sub">Total = 100%</p>
+          </div>
+        </div>
+        <div id="trendStatusPctChart"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>ตารางสรุป: เลขจำนวนร้าน ในแต่ละ Status</h2>
+          <p class="card-sub">จำนวนสาขา แยกตามสถานะ ต่อสัปดาห์ (คำนวณจากข้อมูลย้อนหลัง 4 สัปดาห์ ณ สัปดาห์นั้น)</p>
+        </div>
+      </div>
+      <div class="table-wrap" id="trendCountTableWrap"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>ตารางสรุป: %ร้าน ในแต่ละ Status (Total = 100%)</h2>
+          <p class="card-sub">สัดส่วนสาขา แยกตามสถานะ ต่อสัปดาห์</p>
+        </div>
+      </div>
+      <div class="table-wrap" id="trendPctTableWrap"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>รายละเอียดระดับสาขา</h2>
+          <p class="card-sub" id="trendDetailCardSub">สถานะและพฤติกรรมการเสียบบัตรรายสาขา ปรับตามตัวกรองด้านบน</p>
+        </div>
+        <button class="table-toggle" id="trendExportCsvBtn">⬇ Export CSV</button>
+      </div>
+      <div class="table-wrap" id="trendDetailTableWrap" style="max-height:520px;"></div>
+    </div>
+
+    <footer class="dash-footer" id="trendDashFooter"></footer>
+
+  </div>
 </div>
 
 <div class="tooltip" id="tooltip"></div>
@@ -1345,8 +1488,463 @@ function exportShopsToCsv() {
 }
 document.getElementById('exportCsvBtn').addEventListener('click', exportShopsToCsv);
 
+/* ==================== main tab navigation ==================== */
+function switchMainTab(tab) {
+  document.getElementById('mainTabBtnPerf').classList.toggle('active', tab === 'perf');
+  document.getElementById('mainTabBtnTrend').classList.toggle('active', tab === 'trend');
+  document.getElementById('tabPanelPerf').classList.toggle('active', tab === 'perf');
+  document.getElementById('tabPanelTrend').classList.toggle('active', tab === 'trend');
+}
+document.getElementById('mainTabBtnPerf').addEventListener('click', () => switchMainTab('perf'));
+document.getElementById('mainTabBtnTrend').addEventListener('click', () => switchMainTab('trend'));
+
+/* ==================== Trend Performance tab ==================== */
+
+const TREND_STATUSES = [
+  { key: 'Dead',     label: 'Dead',     color: 'var(--status-critical)', pillClass: 'trend-dead',
+    detail: 'ใน 4 สัปดาห์ที่ผ่านมา ไม่มีการเสียบบัตรเลย' },
+  { key: 'Severe',   label: 'Severe',   color: 'var(--status-serious)',  pillClass: 'trend-severe',
+    detail: 'ใน 4 สัปดาห์ที่ผ่านมา มีการเสียบบัตรน้อยกว่า 4 วัน' },
+  { key: 'Cautious', label: 'Cautious', color: 'var(--status-warning)',  pillClass: 'trend-cautious',
+    detail: 'ใน 4 สัปดาห์ที่ผ่านมา มีการเสียบบัตรมากกว่า 4 วัน แต่ไม่ได้เสียบทุกสัปดาห์' },
+  { key: 'Active',   label: 'Active',   color: 'var(--status-good)',     pillClass: 'trend-active',
+    detail: 'เสียบบัตรสัปดาห์ละ 2 วันหรือมากกว่า และเสียบต่อเนื่องทุกสัปดาห์' },
+];
+const TREND_STATUS_BY_KEY = Object.fromEntries(TREND_STATUSES.map((s, i) => [s.key, { ...s, order: i }]));
+
+function classifyTrend(weeklyDays) {
+  const total = weeklyDays.reduce((a, b) => a + b, 0);
+  if (total === 0) return 'Dead';
+  if (total < 4) return 'Severe';
+  if (weeklyDays.every(d => d >= 2)) return 'Active';
+  return 'Cautious';
+}
+
+/* a "window" = a target week plus the 3 weeks immediately before it (4 weeks total),
+   only offered once the target week itself has data imported */
+function computeTrendWindows() {
+  const out = [];
+  for (let i = 3; i < WEEKS.length; i++) {
+    const target = WEEKS[i];
+    if (target.available_dates.length === 0) continue;
+    out.push({ key: target.key, target, windowWeeks: WEEKS.slice(i - 3, i + 1) });
+  }
+  return out;
+}
+const TREND_WINDOWS = computeTrendWindows();
+function pickDefaultTrendWindow() { return TREND_WINDOWS.length ? TREND_WINDOWS[TREND_WINDOWS.length - 1] : null; }
+
+function buildTrendShops(win) {
+  const byCode = win.windowWeeks.map(w => {
+    const m = new Map(); w.records.forEach(r => m.set(r.shop_code, r)); return m;
+  });
+  return win.target.records.map(base => {
+    const weekly = byCode.map(m => { const r = m.get(base.shop_code); return r ? (r.days_swiped || 0) : 0; });
+    const total = weekly.reduce((a, b) => a + b, 0);
+    return {
+      shop_code: base.shop_code, code_tds: base.code_tds, shop_name: base.shop_name,
+      type_shop: base.type_shop, area: base.area, size_shop: base.size_shop,
+      region: base.region, focus_sf: base.focus_sf,
+      weekly, total, status: classifyTrend(weekly),
+    };
+  });
+}
+
+let CURRENT_TREND_WINDOW = null;
+let TREND_SHOPS = [];
+const trendState = { region: [], area: [], type: [], size: [], focus: [], search: '' };
+
+function trendMatchesFilters(r) {
+  if (trendState.region.length && !trendState.region.includes(r.region)) return false;
+  if (trendState.area.length && !trendState.area.includes(r.area)) return false;
+  if (trendState.type.length && !trendState.type.includes(r.type_shop)) return false;
+  if (trendState.size.length && !trendState.size.includes(r.size_shop)) return false;
+  if (trendState.focus.length && !trendState.focus.includes(r.focus_sf)) return false;
+  if (trendState.search) {
+    const hay = (String(r.shop_name) + ' ' + String(r.shop_code) + ' ' + String(r.code_tds)).toLowerCase();
+    if (!hay.includes(trendState.search)) return false;
+  }
+  return true;
+}
+function getFilteredTrend() { return TREND_SHOPS.filter(trendMatchesFilters); }
+
+/* ---- trend week tabs ---- */
+function buildTrendWeekTabs() {
+  const wrap = document.getElementById('trendWeekTabs');
+  wrap.innerHTML = '';
+  TREND_WINDOWS.forEach(win => {
+    const btn = document.createElement('button');
+    btn.className = 'week-tab' + (CURRENT_TREND_WINDOW && win.key === CURRENT_TREND_WINDOW.key ? ' active' : '');
+    const title = document.createElement('div'); title.className = 'wt-title'; title.textContent = win.key;
+    const sub = document.createElement('div'); sub.className = 'wt-sub';
+    sub.textContent = `${win.windowWeeks[0].key} – ${win.windowWeeks[3].key}`;
+    const tag = document.createElement('div'); tag.className = 'wt-tag has-data';
+    tag.textContent = 'ย้อนหลัง 4 สัปดาห์';
+    btn.appendChild(title); btn.appendChild(sub); btn.appendChild(tag);
+    btn.addEventListener('click', () => { if (!CURRENT_TREND_WINDOW || win.key !== CURRENT_TREND_WINDOW.key) switchTrendWindow(win.key); });
+    wrap.appendChild(btn);
+  });
+}
+
+/* ---- trend multi-select filters (mirrors buildMultiSelect, bound to trendState) ---- */
+const TREND_MS_REGISTRY = {};
+function buildTrendMultiSelect(rootId, key, values, allLabel, labelFn) {
+  TREND_MS_REGISTRY[key] = { rootId, allLabel, labelFn, values };
+  const root = document.getElementById(rootId);
+  root.innerHTML = ''; root.classList.remove('open');
+
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'ms-button';
+  const btnLabel = document.createElement('span'); btnLabel.className = 'ms-btn-label';
+  const badge = document.createElement('span'); badge.className = 'ms-count-badge'; badge.style.display = 'none';
+  const caret = document.createElement('span'); caret.className = 'ms-caret'; caret.textContent = '▾';
+  btn.appendChild(btnLabel); btn.appendChild(badge); btn.appendChild(caret);
+
+  const panel = document.createElement('div'); panel.className = 'ms-panel';
+  const actions = document.createElement('div'); actions.className = 'ms-panel-actions';
+  const selectAllBtn = document.createElement('button'); selectAllBtn.type = 'button'; selectAllBtn.textContent = 'เลือกทั้งหมด';
+  const clearBtn = document.createElement('button'); clearBtn.type = 'button'; clearBtn.textContent = 'ล้าง';
+  actions.appendChild(selectAllBtn); actions.appendChild(clearBtn);
+  const options = document.createElement('div'); options.className = 'ms-options';
+
+  values.forEach(v => {
+    const opt = document.createElement('label'); opt.className = 'ms-option';
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = v;
+    cb.checked = trendState[key].includes(v);
+    cb.addEventListener('change', () => {
+      const arr = trendState[key];
+      if (cb.checked) { if (!arr.includes(v)) arr.push(v); }
+      else { const i = arr.indexOf(v); if (i > -1) arr.splice(i, 1); }
+      updateTrendMsButtonLabel(key);
+      renderTrendPage();
+    });
+    const txt = document.createElement('span'); txt.className = 'ms-opt-label'; txt.textContent = labelFn(v);
+    opt.appendChild(cb); opt.appendChild(txt);
+    options.appendChild(opt);
+  });
+
+  selectAllBtn.addEventListener('click', () => {
+    trendState[key] = [...values];
+    options.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+    updateTrendMsButtonLabel(key); renderTrendPage();
+  });
+  clearBtn.addEventListener('click', () => {
+    trendState[key] = [];
+    options.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+    updateTrendMsButtonLabel(key); renderTrendPage();
+  });
+
+  panel.appendChild(actions); panel.appendChild(options);
+  panel.addEventListener('click', e => e.stopPropagation());
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const isOpen = root.classList.contains('open');
+    document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+    if (!isOpen) root.classList.add('open');
+  });
+
+  root.appendChild(btn); root.appendChild(panel);
+  updateTrendMsButtonLabel(key);
+}
+function updateTrendMsButtonLabel(key) {
+  const meta = TREND_MS_REGISTRY[key];
+  if (!meta) return;
+  const root = document.getElementById(meta.rootId);
+  const btnLabel = root.querySelector('.ms-btn-label');
+  const badge = root.querySelector('.ms-count-badge');
+  const selected = trendState[key];
+  if (selected.length === 0) { btnLabel.textContent = meta.allLabel; badge.style.display = 'none'; }
+  else if (selected.length <= 2) { btnLabel.textContent = selected.map(meta.labelFn).join(', '); badge.style.display = 'none'; }
+  else { btnLabel.textContent = meta.labelFn(selected[0]) + ' …'; badge.style.display = 'inline-block'; badge.textContent = selected.length; }
+}
+
+document.getElementById('tf-search').addEventListener('input', e => {
+  trendState.search = e.target.value.trim().toLowerCase();
+  renderTrendPage();
+});
+document.getElementById('trendResetFilters').addEventListener('click', () => {
+  ['region', 'area', 'type', 'size', 'focus'].forEach(key => {
+    trendState[key] = [];
+    const meta = TREND_MS_REGISTRY[key];
+    if (meta) {
+      document.getElementById(meta.rootId).querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+      updateTrendMsButtonLabel(key);
+    }
+  });
+  trendState.search = '';
+  document.getElementById('tf-search').value = '';
+  renderTrendPage();
+});
+
+function switchTrendWindow(key) {
+  CURRENT_TREND_WINDOW = TREND_WINDOWS.find(w => w.key === key) || null;
+  if (!CURRENT_TREND_WINDOW) return;
+  TREND_SHOPS = buildTrendShops(CURRENT_TREND_WINDOW);
+
+  trendState.region = []; trendState.area = []; trendState.type = []; trendState.size = []; trendState.focus = []; trendState.search = '';
+  document.getElementById('tf-search').value = '';
+
+  buildTrendMultiSelect('tf-region', 'region', uniqueSorted(TREND_SHOPS, 'region'), 'ทุกภูมิภาค', v => v);
+  buildTrendMultiSelect('tf-area', 'area', uniqueSorted(TREND_SHOPS, 'area'), 'ทุกพื้นที่', v => v);
+  buildTrendMultiSelect('tf-type', 'type', uniqueSorted(TREND_SHOPS, 'type_shop'), 'ทุกประเภทร้าน', v => v);
+  buildTrendMultiSelect('tf-size', 'size', uniqueSorted(TREND_SHOPS, 'size_shop'), 'ทุกขนาด', v => v);
+  buildTrendMultiSelect('tf-focus', 'focus', ['Y', 'N'], 'ทุกสถานะ Focus', v => v === 'Y' ? 'Focus (Y)' : 'ไม่ Focus (N)');
+
+  const w = CURRENT_TREND_WINDOW;
+  const winLabel = `${w.windowWeeks[0].key} – ${w.windowWeeks[3].key}`;
+  document.getElementById('trendInfoBox').innerHTML =
+    `<b>ตัวอย่างการคำนวณของ ${w.key}</b> (คือ ${winLabel}) — นับจำนวนวันที่เสียบบัตรของแต่ละสาขาสะสมใน 4 สัปดาห์ล่าสุด `
+    + `(${w.windowWeeks.map(x => x.key).join(', ')}) แล้วจัดสถานะดังนี้:`
+    + `<br>• <b>Dead</b> — 4 สัปดาห์ที่ผ่านมา ไม่มีการเสียบบัตรเลย`
+    + `<br>• <b>Severe</b> — 4 สัปดาห์ที่ผ่านมา มีการเสียบบัตรน้อยกว่า 4 วัน`
+    + `<br>• <b>Cautious</b> — 4 สัปดาห์ที่ผ่านมา มีการเสียบบัตรมากกว่า 4 วัน แต่ไม่ได้เสียบทุกสัปดาห์`
+    + `<br>• <b>Active</b> — เสียบบัตรสัปดาห์ละ 2 วันหรือมากกว่า และเสียบต่อเนื่องทุกสัปดาห์`;
+
+  buildTrendWeekTabs();
+  renderTrendPage();
+}
+
+/* ---- rendering ---- */
+function buildTrendStatusLegend() {
+  buildLegend('trendStatusLegend', TREND_STATUSES.map(s => ({ color: s.color, label: s.label })));
+}
+
+function renderTrendBanner(data) {
+  const dyn = document.getElementById('trendBannerDynamic');
+  const bannerEl = document.getElementById('trendBanner');
+  const FILTER_LABELS_T = { region: 'ภูมิภาค', area: 'พื้นที่', type: 'ประเภทร้าน', size: 'ขนาดร้าน', focus: 'Focus SF+' };
+  const chips = [];
+  ['region', 'area', 'type', 'size', 'focus'].forEach(key => {
+    if (trendState[key].length > 0) {
+      const meta = TREND_MS_REGISTRY[key];
+      const labelFn = meta ? meta.labelFn : (v => v);
+      const value = trendState[key].length <= 3
+        ? trendState[key].map(labelFn).join(', ')
+        : `${labelFn(trendState[key][0])} +${trendState[key].length - 1} รายการ`;
+      chips.push({ label: FILTER_LABELS_T[key], value });
+    }
+  });
+  if (trendState.search) chips.push({ label: 'ค้นหา', value: `"${trendState.search}"` });
+
+  dyn.innerHTML = '';
+  if (chips.length === 0) {
+    const s = document.createElement('span'); s.textContent = `ภาพรวมทุกสาขา (${TREND_SHOPS.length} สาขา) — `;
+    dyn.appendChild(s);
+  } else {
+    const s = document.createElement('span'); s.textContent = 'กำลังกรอง: '; dyn.appendChild(s);
+    chips.forEach(c => {
+      const chip = document.createElement('span'); chip.className = 'chip';
+      const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = 'var(--series-1)';
+      const txt = document.createElement('span'); txt.textContent = `${c.label}: ${c.value}`;
+      chip.appendChild(dot); chip.appendChild(txt); dyn.appendChild(chip);
+    });
+    const arrow = document.createElement('span'); arrow.textContent = '→'; dyn.appendChild(arrow);
+  }
+
+  const total = data.length;
+  const activeN = data.filter(r => r.status === 'Active').length;
+  const deadN = data.filter(r => r.status === 'Dead').length;
+  const activeRate = pct(activeN, total);
+  const status = total === 0 ? 'muted' : (activeRate >= 50 ? 'good' : (activeRate >= 25 ? 'warning' : 'critical'));
+  bannerEl.style.borderLeftColor = STATUS_COLOR[status];
+
+  const insight = document.createElement('span');
+  if (total === 0) insight.textContent = 'ไม่พบสาขาที่ตรงกับตัวกรองนี้';
+  else insight.innerHTML = `${total.toLocaleString()} สาขา · Active <span class="insight-rate" style="color:${STATUS_COLOR.good}">${fmtPct(activeRate)}</span> (${activeN}/${total}) · Dead ${deadN.toLocaleString()} สาขา`;
+  dyn.appendChild(insight);
+
+  document.getElementById('trendBannerStatic').innerHTML =
+    `คำนวณจากข้อมูลย้อนหลัง 4 สัปดาห์ (<b>${CURRENT_TREND_WINDOW.windowWeeks.map(w => w.key).join(' → ')}</b>) ณ สัปดาห์ <b>${CURRENT_TREND_WINDOW.key}</b>`;
+}
+
+function renderTrendStatTiles(data) {
+  const total = data.length;
+  const grid = document.getElementById('trendStatGrid');
+  grid.innerHTML = '';
+  TREND_STATUSES.forEach(s => {
+    const n = data.filter(r => r.status === s.key).length;
+    const rate = pct(n, total);
+    const tile = document.createElement('div');
+    tile.className = 'stat-tile';
+    tile.style.borderTop = `3px solid ${s.color}`;
+    const l = document.createElement('div'); l.className = 'label'; l.textContent = s.label;
+    const v = document.createElement('div'); v.className = 'value'; v.style.color = s.color; v.textContent = n.toLocaleString();
+    const d = document.createElement('div'); d.className = 'delta'; d.textContent = `${fmtPct(rate)} ของสาขาทั้งหมด (${total.toLocaleString()})`;
+    tile.appendChild(l); tile.appendChild(v); tile.appendChild(d);
+    grid.appendChild(tile);
+  });
+}
+
+function renderTrendCharts(data) {
+  const total = data.length || 1;
+  const rows = TREND_STATUSES.map(s => {
+    const n = data.filter(r => r.status === s.key).length;
+    return { label: s.label, key: s.key, value: n, rate: pct(n, total), color: s.color };
+  });
+  renderHBarChart('trendStatusChart', rows, {
+    rowH: 30, leftLabelW: 90, gridSteps: 4,
+    maxVal: Math.max(1, ...rows.map(r => r.value)),
+    colorFn: item => item.color,
+    valueLabel: item => `${item.value} สาขา (${fmtPct(item.rate)})`,
+    tooltipRows: item => [['จำนวนสาขา', String(item.value)], ['สัดส่วน', fmtPct(item.rate)]],
+  });
+  buildTable('trendStatusChartTable', [
+    { key: 'label', label: 'Status' }, { key: 'value', label: 'จำนวนสาขา' },
+    { key: 'rate', label: 'สัดส่วน (%)', render: (td, val) => td.textContent = fmtPct(val) },
+  ], rows, { defaultSort: 'value', defaultDir: -1 });
+
+  renderHBarChart('trendStatusPctChart', rows.map(r => ({ ...r, value: r.rate })), {
+    rowH: 30, leftLabelW: 90, gridSteps: 4, suffix: '%', maxVal: 100,
+    colorFn: item => item.color,
+    valueLabel: item => fmtPct(item.value),
+    tooltipRows: item => [['สัดส่วน', fmtPct(item.value)], ['จำนวนสาขา', String(data.filter(r => r.status === item.key).length)]],
+  });
+}
+
+function computeTrendCountsForWindow(win) {
+  const shops = buildTrendShops(win).filter(trendMatchesFilters);
+  const total = shops.length;
+  const counts = {};
+  TREND_STATUSES.forEach(s => { counts[s.key] = shops.filter(r => r.status === s.key).length; });
+  return { total, counts };
+}
+
+function renderTrendSummaryTables() {
+  if (TREND_WINDOWS.length === 0) {
+    document.getElementById('trendCountTableWrap').innerHTML = '<div class="empty-state">ยังไม่มีข้อมูลเพียงพอสำหรับคำนวณ Trend Performance (ต้องมีข้อมูลสัปดาห์ต่อเนื่องอย่างน้อย 4 สัปดาห์)</div>';
+    document.getElementById('trendPctTableWrap').innerHTML = '';
+    return;
+  }
+  const windowStats = TREND_WINDOWS.map(w => ({ win: w, ...computeTrendCountsForWindow(w) }));
+
+  const countCols = [
+    { key: 'label', label: 'สถานะ' },
+    { key: 'detail', label: 'รายละเอียด' },
+    ...windowStats.map(ws => ({
+      key: 'n_' + ws.win.key, label: ws.win.key,
+      render: (td, val) => { td.textContent = val.toLocaleString() + ' สาขา'; },
+    })),
+  ];
+  const countRows = TREND_STATUSES.map((s, i) => {
+    const row = { label: s.label, detail: s.detail, __order: i };
+    windowStats.forEach(ws => { row['n_' + ws.win.key] = ws.counts[s.key]; });
+    return row;
+  });
+  buildTable('trendCountTableWrap', countCols, countRows, { defaultSort: '__order', defaultDir: 1 });
+
+  const pctCols = [
+    { key: 'label', label: 'สถานะ' },
+    { key: 'detail', label: 'รายละเอียด' },
+    ...windowStats.map(ws => ({
+      key: 'p_' + ws.win.key, label: ws.win.key,
+      render: (td, val) => { td.textContent = fmtPct(val); },
+    })),
+  ];
+  const pctRows = TREND_STATUSES.map((s, i) => {
+    const row = { label: s.label, detail: s.detail, __order: i };
+    windowStats.forEach(ws => { row['p_' + ws.win.key] = pct(ws.counts[s.key], ws.total); });
+    return row;
+  });
+  buildTable('trendPctTableWrap', pctCols, pctRows, { defaultSort: '__order', defaultDir: 1 });
+}
+
+function renderTrendDetailTable(data) {
+  const dayCols = CURRENT_TREND_WINDOW.windowWeeks.map((w, idx) => ({
+    key: '__w_' + idx, label: w.key,
+    render: (td, val, row) => { td.textContent = row.weekly[idx]; },
+  }));
+  const cols = [
+    { key: 'shop_name', label: 'ชื่อร้าน' },
+    { key: 'region', label: 'ภูมิภาค' },
+    { key: 'area', label: 'พื้นที่' },
+    { key: 'type_shop', label: 'ประเภท' },
+    { key: 'size_shop', label: 'ขนาด' },
+    { key: 'focus_sf', label: 'Focus', render: focusPill },
+    ...dayCols,
+    { key: 'total', label: 'รวม (วัน)' },
+    {
+      key: 'status', label: 'Trend Status', render: (td, val) => {
+        const s = TREND_STATUS_BY_KEY[val];
+        const span = document.createElement('span');
+        span.className = 'pill ' + s.pillClass;
+        span.textContent = s.label;
+        td.appendChild(span);
+      },
+    },
+  ];
+  buildTable('trendDetailTableWrap', cols, data, { defaultSort: 'total', defaultDir: 1 });
+}
+
+function renderTrendPage() {
+  if (!CURRENT_TREND_WINDOW) return;
+  const data = getFilteredTrend();
+  document.getElementById('trendFilterCount').textContent = `แสดง ${data.length} จาก ${TREND_SHOPS.length} สาขา`;
+
+  renderTrendBanner(data);
+  renderTrendStatTiles(data);
+  renderTrendCharts(data);
+  renderTrendSummaryTables();
+  renderTrendDetailTable(data);
+
+  document.getElementById('trendDetailCardSub').textContent =
+    `สถานะ ณ สัปดาห์ ${CURRENT_TREND_WINDOW.key} (ย้อนหลัง 4 สัปดาห์: ${CURRENT_TREND_WINDOW.windowWeeks.map(w => w.key).join(', ')}) — ปรับตามตัวกรองด้านบน`;
+  document.getElementById('trendDashFooter').textContent =
+    `Trend Performance คำนวณจากข้อมูล ${CURRENT_TREND_WINDOW.windowWeeks.map(w => w.key).join(', ')} · จำนวนสาขาทั้งหมด ${TREND_SHOPS.length} สาขา · จัดทำเพื่อการวิเคราะห์ภายในเท่านั้น`;
+}
+
+/* ---- trend CSV export ---- */
+function exportTrendToCsv() {
+  if (!CURRENT_TREND_WINDOW) return;
+  const dayCols = CURRENT_TREND_WINDOW.windowWeeks.map((w, idx) => ({ key: '__w_' + idx, label: w.key }));
+  const columns = [
+    { key: 'shop_name', label: 'ชื่อร้าน' },
+    { key: 'shop_code', label: 'รหัสร้าน (Shop Code)' },
+    { key: 'code_tds', label: 'CODE TDS' },
+    { key: 'region', label: 'ภูมิภาค' },
+    { key: 'area', label: 'พื้นที่' },
+    { key: 'type_shop', label: 'ประเภทร้าน' },
+    { key: 'size_shop', label: 'ขนาดร้าน' },
+    { key: 'focus_sf', label: 'Focus SF+' },
+    ...dayCols,
+    { key: 'total', label: 'จำนวนวันที่เสียบบัตรรวม (4 สัปดาห์)' },
+    { key: 'status', label: 'Trend Status' },
+  ];
+  const rows = [...getFilteredTrend()].sort((a, b) => String(a.shop_name).localeCompare(String(b.shop_name)));
+  const lines = [];
+  lines.push(columns.map(c => csvEscape(c.label)).join(','));
+  rows.forEach(r => {
+    const line = columns.map(c => {
+      if (c.key.startsWith('__w_')) { const idx = Number(c.key.slice(4)); return csvEscape(r.weekly[idx]); }
+      return csvEscape(r[c.key]);
+    });
+    lines.push(line.join(','));
+  });
+  const csvContent = '﻿' + lines.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `SFPlus_Trend_${CURRENT_TREND_WINDOW.key}_${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+document.getElementById('trendExportCsvBtn').addEventListener('click', exportTrendToCsv);
+
 /* ---------- init ---------- */
 switchWeek(pickDefaultWeekKey());
+
+buildTrendStatusLegend();
+const __defTrendWindow = pickDefaultTrendWindow();
+if (__defTrendWindow) {
+  switchTrendWindow(__defTrendWindow.key);
+} else {
+  document.getElementById('trendInfoBox').innerHTML =
+    'ยังไม่มีข้อมูลเพียงพอสำหรับคำนวณ Trend Performance (ต้องมีข้อมูลสัปดาห์ที่นำเข้าแล้วต่อเนื่องอย่างน้อย 4 สัปดาห์)';
+  renderTrendSummaryTables();
+}
 
 </script>
 </body>
